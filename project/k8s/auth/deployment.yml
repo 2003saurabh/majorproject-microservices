@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: microservices-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: auth
+        image: 288761736206.dkr.ecr.ap-south-1.amazonaws.com/auth:latest
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 8001
+
+        # 🔥 Load ConfigMap + Secret
+        envFrom:
+        - configMapRef:
+            name: auth-config
+        - secretRef:
+            name: auth-secret
+
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        # ✅ FIXED PORT
+        readinessProbe:
+          httpGet:
+            path: /docs
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+        livenessProbe:
+          httpGet:
+            path: /docs
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false

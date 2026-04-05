@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: microservices-dev
+data:
+  DB_HOST: postgres-service
+  DB_PORT: "5432"
+  DB_NAME: appdb
+  DB_USER: postgres
+
+  JWT_ALGORITHM: HS256
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  REFRESH_TOKEN_EXPIRE_DAYS: "7"
+
+  OTP_EXPIRE_MINUTES: "10"
+  OTP_LENGTH: "6"
+
+  SMTP_HOST: smtp.gmail.com
+  SMTP_PORT: "587"
+  SMTP_USER: saurabh.21gcebds032@galgotiacollege.edu
+  EMAIL_FROM: saurabh.21gcebds032@galgotiacollege.edu
+  EMAIL_ENABLED: "true"

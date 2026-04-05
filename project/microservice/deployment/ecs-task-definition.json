@@ -1,0 +1,57 @@
+{
+  "family": "python-microservice",
+  "networkMode": "bridge",
+  "requiresCompatibilities": ["EC2"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn":      "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskRole",
+
+  "containerDefinitions": [
+    {
+      "name": "python-microservice",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/python-microservice:latest",
+      "essential": true,
+      "memoryReservation": 512,
+
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 0,
+          "protocol": "tcp"
+        }
+      ],
+
+      "environment": [
+        { "name": "DB_PORT", "value": "5432" },
+        { "name": "DB_NAME", "value": "appdb" }
+      ],
+
+      "secrets": [
+        { "name": "DB_HOST",     "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:rds/host" },
+        { "name": "DB_USER",     "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:rds/username" },
+        { "name": "DB_PASSWORD", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:rds/password" }
+      ],
+
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/health/live || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 20
+      },
+
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group":         "/ecs/python-microservice",
+          "awslogs-region":        "YOUR_REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

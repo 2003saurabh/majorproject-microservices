@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Microservice Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── TOKENS ──────────────────────────────────────────────── */
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #111118;
+      --card:      #16161f;
+      --border:    #23232f;
+      --accent:    #00e5a0;
+      --accent2:   #3d7fff;
+      --danger:    #ff4566;
+      --warning:   #ffb020;
+      --text:      #e8e8f0;
+      --muted:     #6b6b80;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius:    10px;
+      --shadow:    0 4px 32px rgba(0,0,0,0.5);
+    }
+
+    /* ── RESET ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── GRID BACKGROUND ─────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────────────── */
+    .layout { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+    /* ── SIDEBAR ─────────────────────────────────────────────── */
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .sidebar-logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .logo-mark {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .sidebar-logo .logo-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+      letter-spacing: 0.05em;
+    }
+    .sidebar-nav { padding: 16px 12px; flex: 1; }
+    .nav-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 0 12px;
+      margin-bottom: 8px;
+      margin-top: 16px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+      font-size: 13px;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--card); color: var(--text); }
+    .nav-item.active {
+      background: rgba(0,229,160,0.08);
+      color: var(--accent);
+      border-color: rgba(0,229,160,0.2);
+    }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .health-badge {
+      margin: 16px;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 12px;
+    }
+    .health-badge .badge-title { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+    .health-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+    .health-row span:first-child { color: var(--muted); }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted);
+      display: inline-block;
+      transition: background 0.3s;
+    }
+    .dot.ok { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .dot.err { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+
+    /* ── MAIN ────────────────────────────────────────────────── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+    /* ── TOPBAR ──────────────────────────────────────────────── */
+    .topbar {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      gap: 16px;
+    }
+    .topbar-title {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .topbar-right { display: flex; gap: 10px; align-items: center; }
+
+    /* ── CONFIG BAR ──────────────────────────────────────────── */
+    .config-bar {
+      padding: 12px 32px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .config-bar label { color: var(--muted); font-size: 12px; }
+    .config-bar input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      width: 320px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .config-bar input:focus { border-color: var(--accent); }
+
+    /* ── CONTENT ─────────────────────────────────────────────── */
+    .content { padding: 32px; flex: 1; }
+
+    /* ── STAT CARDS ──────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0.4;
+    }
+    .stat-card:nth-child(2)::after { background: var(--accent2); }
+    .stat-card:nth-child(3)::after { background: var(--warning); }
+    .stat-card:nth-child(4)::after { background: var(--danger); }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 32px;
+      font-weight: 800;
+      margin-top: 6px;
+      color: var(--text);
+    }
+
+    /* ── PANEL ───────────────────────────────────────────────── */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: fadeUp 0.4s ease 0.1s both;
+    }
+    .panel-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .panel-title {
+      font-family: var(--font-head);
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .panel-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* ── SEARCH ──────────────────────────────────────────────── */
+    .search-wrap { position: relative; }
+    .search-wrap input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 7px 12px 7px 32px;
+      border-radius: 6px;
+      outline: none;
+      width: 200px;
+      transition: border-color 0.2s, width 0.2s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); width: 240px; }
+    .search-wrap::before {
+      content: '⌕';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* ── BUTTONS ─────────────────────────────────────────────── */
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover { background: #00ffa8; transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+    .btn-danger { background: rgba(255,69,102,0.12); color: var(--danger); border: 1px solid rgba(255,69,102,0.25); }
+    .btn-danger:hover { background: rgba(255,69,102,0.22); }
+    .btn-edit { background: rgba(61,127,255,0.12); color: var(--accent2); border: 1px solid rgba(61,127,255,0.25); }
+    .btn-edit:hover { background: rgba(61,127,255,0.22); }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ── TABLE ───────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(35,35,47,0.6);
+      vertical-align: middle;
+      font-size: 13px;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr { transition: background 0.1s; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .id-cell { color: var(--muted); font-size: 12px; }
+    .name-cell { font-weight: 500; color: var(--text); }
+    .desc-cell { color: var(--muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .actions-cell { display: flex; gap: 6px; }
+
+    /* ── BADGE ───────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .badge-active { background: rgba(0,229,160,0.12); color: var(--accent); }
+    .badge-inactive { background: rgba(107,107,128,0.15); color: var(--muted); }
+
+    /* ── MODAL ───────────────────────────────────────────────── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 460px;
+      max-width: 95vw;
+      box-shadow: var(--shadow);
+      animation: popIn 0.2s ease;
+    }
+    .modal-head {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title { font-family: var(--font-head); font-size: 17px; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 12px; color: var(--muted); }
+    .form-input, .form-textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .form-input:focus, .form-textarea:focus { border-color: var(--accent); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .toggle {
+      width: 40px; height: 22px;
+      background: var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+      border: none;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px; left: 3px;
+      transition: left 0.2s;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle.on::after { left: 21px; }
+
+    /* ── TOAST ───────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 200;
+    }
+    .toast {
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      max-width: 320px;
+      animation: slideIn 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast-success { background: rgba(0,229,160,0.15); border: 1px solid rgba(0,229,160,0.35); color: var(--accent); }
+    .toast-error { background: rgba(255,69,102,0.15); border: 1px solid rgba(255,69,102,0.35); color: var(--danger); }
+    .toast-info { background: rgba(61,127,255,0.15); border: 1px solid rgba(61,127,255,0.35); color: var(--accent2); }
+
+    /* ── EMPTY / LOADING ─────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 40px auto;
+    }
+
+    /* ── PAGINATION ──────────────────────────────────────────── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .page-btns { display: flex; gap: 6px; }
+
+    /* ── HEALTH PAGE ─────────────────────────────────────────── */
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .health-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      animation: fadeUp 0.4s ease both;
+    }
+    .health-card-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 14px; }
+    .health-status {
+      font-family: var(--font-head);
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .health-status.ok { color: var(--accent); }
+    .health-status.err { color: var(--danger); }
+    .health-status.loading { color: var(--muted); }
+    .health-meta { margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .health-meta span { color: var(--text); }
+
+    /* ── ANIMATIONS ──────────────────────────────────────────── */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+    @keyframes popIn  { from { opacity:0; transform:scale(0.94); }     to { opacity:1; transform:none; } }
+    @keyframes spin   { to { transform: rotate(360deg); } }
+    @keyframes slideIn{ from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .health-grid { grid-template-columns: 1fr; }
+      .content { padding: 20px; }
+      .topbar { padding: 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">⬡ MicroSVC</div>
+      <div class="logo-sub">Dashboard v1.0</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Navigation</div>
+      <div class="nav-item active" data-page="items" onclick="showPage('items')">
+        <span class="icon">◈</span> Items
+      </div>
+      <div class="nav-item" data-page="health" onclick="showPage('health')">
+        <span class="icon">◉</span> Health
+      </div>
+    </nav>
+    <div class="health-badge">
+      <div class="badge-title">Service Status</div>
+      <div class="health-row">
+        <span>API</span><span class="dot" id="sb-api"></span>
+      </div>
+      <div class="health-row">
+        <span>Database</span><span class="dot" id="sb-db"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">Items</div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="refreshCurrent()">↺ Refresh</button>
+        <button class="btn btn-primary" onclick="openCreate()" id="btn-new-item">＋ New Item</button>
+      </div>
+    </div>
+
+    <!-- CONFIG BAR -->
+    <div class="config-bar">
+      <label>API Base URL</label>
+      <input type="text" id="api-url" placeholder="http://your-alb-or-ec2:8000" value="http://localhost:8000" />
+      <button class="btn btn-ghost" style="font-size:12px;" onclick="saveApiUrl()">Apply</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ITEMS PAGE -->
+      <div id="page-items">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Items</div>
+            <div class="stat-value" id="stat-total">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active</div>
+            <div class="stat-value" id="stat-active">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Inactive</div>
+            <div class="stat-value" id="stat-inactive">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Showing</div>
+            <div class="stat-value" id="stat-showing">—</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">All Items</div>
+            <div class="panel-actions">
+              <div class="search-wrap">
+                <input type="text" id="search-input" placeholder="Search items..." oninput="filterItems()" />
+              </div>
+              <select class="btn btn-ghost" style="font-size:12px;cursor:pointer;" id="filter-status" onchange="filterItems()">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <div id="table-loading" class="spinner"></div>
+            <table id="items-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="items-tbody"></tbody>
+            </table>
+            <div id="items-empty" class="empty-state" style="display:none;">
+              <div class="empty-icon">◫</div>
+              <div class="empty-text">No items found</div>
+            </div>
+          </div>
+          <div class="pagination">
+            <span id="page-info">—</span>
+            <div class="page-btns">
+              <button class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevPage()" disabled>← Prev</button>
+              <button class="btn btn-ghost btn-sm" id="btn-next" onclick="nextPage()">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HEALTH PAGE -->
+      <div id="page-health" style="display:none;">
+        <div class="health-grid">
+          <div class="health-card">
+            <div class="health-card-title">Liveness  /health/live</div>
+            <div class="health-status loading" id="h-live">— Checking...</div>
+            <div class="health-meta" id="h-live-meta"></div>
+          </div>
+          <div class="health-card">
+            <div class="health-card-title">Health  /health</div>
+            <div class="health-status loading" id="h-basic">— Checking...</div>
+            <div class="health-meta" id="h-basic-meta"></div>
+          </div>
+          <div class="health-card">
+            <div class="health-card-title">Readiness  /health/ready</div>
+            <div class="health-status loading" id="h-ready">— Checking...</div>
+            <div class="health-meta" id="h-ready-meta"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Raw API Response</div></div>
+          <pre id="health-raw" style="padding:20px;font-size:12px;color:var(--muted);overflow-x:auto;white-space:pre-wrap;"></pre>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- CREATE / EDIT MODAL -->
+<div class="overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">New Item</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" id="f-name" type="text" placeholder="Item name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="f-desc" placeholder="Optional description"></textarea>
+      </div>
+      <div class="form-group">
+        <div class="toggle-row">
+          <label class="form-label">Active</label>
+          <button class="toggle on" id="f-toggle" onclick="toggleActive()"></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-submit" onclick="submitModal()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="overlay" id="del-overlay">
+  <div class="modal" style="width:380px;">
+    <div class="modal-head">
+      <div class="modal-title">Delete Item</div>
+      <button class="modal-close" onclick="closeDelete()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);">Are you sure you want to delete <strong id="del-name" style="color:var(--text);"></strong>? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDelete()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+let API = localStorage.getItem('api_url') || 'http://localhost:8000';
+let allItems = [];
+let filtered = [];
+let currentPage = 1;
+const PAGE_SIZE = 15;
+let editingId = null;
+let deletingId = null;
+let isActiveToggle = true;
+let currentPageName = 'items';
+
+document.getElementById('api-url').value = API;
+
+// ── NAVIGATION ───────────────────────────────────────────────────────────────
+function showPage(page) {
+  currentPageName = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page === page));
+  document.getElementById('page-items').style.display  = page === 'items'  ? '' : 'none';
+  document.getElementById('page-health').style.display = page === 'health' ? '' : 'none';
+  document.getElementById('btn-new-item').style.display = page === 'items' ? '' : 'none';
+  const titles = { items: 'Items', health: 'Health Checks' };
+  document.getElementById('page-title').textContent = titles[page];
+  if (page === 'health') loadHealth();
+}
+
+function refreshCurrent() {
+  if (currentPageName === 'items') loadItems();
+  else loadHealth();
+}
+
+function saveApiUrl() {
+  API = document.getElementById('api-url').value.replace(/\/$/, '');
+  localStorage.setItem('api_url', API);
+  toast('API URL updated', 'info');
+  refreshCurrent();
+  checkSidebarHealth();
+}
+
+// ── API HELPERS ──────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ── ITEMS ────────────────────────────────────────────────────────────────────
+async function loadItems() {
+  document.getElementById('table-loading').style.display = 'block';
+  document.getElementById('items-table').style.display = 'none';
+  document.getElementById('items-empty').style.display = 'none';
+  try {
+    allItems = await apiFetch('/items?limit=500');
+    filterItems();
+  } catch (e) {
+    toast('Failed to load items: ' + e.message, 'error');
+    document.getElementById('table-loading').style.display = 'none';
+    document.getElementById('items-empty').style.display = 'block';
+  }
+}
+
+function filterItems() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const st = document.getElementById('filter-status').value;
+  filtered = allItems.filter(item => {
+    const matchQ = item.name.toLowerCase().includes(q) || (item.description || '').toLowerCase().includes(q);
+    const matchSt = st === 'all' || (st === 'active' && item.is_active) || (st === 'inactive' && !item.is_active);
+    return matchQ && matchSt;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function renderTable() {
+  const total = allItems.length;
+  const active = allItems.filter(i => i.is_active).length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-inactive').textContent = total - active;
+
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+  document.getElementById('stat-showing').textContent = filtered.length;
+
+  document.getElementById('table-loading').style.display = 'none';
+
+  if (filtered.length === 0) {
+    document.getElementById('items-table').style.display = 'none';
+    document.getElementById('items-empty').style.display = 'block';
+    document.getElementById('page-info').textContent = '0 results';
+    return;
+  }
+
+  document.getElementById('items-empty').style.display = 'none';
+  document.getElementById('items-table').style.display = 'table';
+
+  const tbody = document.getElementById('items-tbody');
+  tbody.innerHTML = page.map(item => `
+    <tr>
+      <td class="id-cell">#${item.id}</td>
+      <td class="name-cell">${esc(item.name)}</td>
+      <td class="desc-cell">${esc(item.description || '—')}</td>
+      <td><span class="badge ${item.is_active ? 'badge-active' : 'badge-inactive'}">
+        ${item.is_active ? '● Active' : '○ Inactive'}</span></td>
+      <td style="color:var(--muted);font-size:12px;">${fmtDate(item.created_at)}</td>
+      <td class="actions-cell">
+        <button class="btn btn-edit btn-sm" onclick="openEdit(${item.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="openDelete(${item.id}, '${esc(item.name)}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  document.getElementById('page-info').textContent =
+    `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} of ${filtered.length}`;
+  document.getElementById('btn-prev').disabled = currentPage === 1;
+  document.getElementById('btn-next').disabled = currentPage >= totalPages;
+}
+
+function prevPage() { if (currentPage > 1) { currentPage--; renderTable(); } }
+function nextPage() { currentPage++; renderTable(); }
+
+// ── CREATE / EDIT ────────────────────────────────────────────────────────────
+function openCreate() {
+  editingId = null;
+  isActiveToggle = true;
+  document.getElementById('modal-title').textContent = 'New Item';
+  document.getElementById('modal-submit').textContent = 'Create';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-desc').value = '';
+  updateToggleUI();
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 100);
+}
+
+function openEdit(id) {
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  isActiveToggle = item.is_active;
+  document.getElementById('modal-title').textContent = 'Edit Item';
+  document.getElementById('modal-submit').textContent = 'Save Changes';
+  document.getElementById('f-name').value = item.name;
+  document.getElementById('f-desc').value = item.description || '';
+  updateToggleUI();
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 100);
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function toggleActive() {
+  isActiveToggle = !isActiveToggle;
+  updateToggleUI();
+}
+function updateToggleUI() {
+  document.getElementById('f-toggle').classList.toggle('on', isActiveToggle);
+}
+
+async function submitModal() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Name is required', 'error'); return; }
+  const payload = {
+    name,
+    description: document.getElementById('f-desc').value.trim() || null,
+    is_active: isActiveToggle,
+  };
+  const btn = document.getElementById('modal-submit');
+  btn.disabled = true;
+  try {
+    if (editingId) {
+      await apiFetch(`/items/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      toast('Item updated ✓', 'success');
+    } else {
+      await apiFetch('/items', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Item created ✓', 'success');
+    }
+    closeModal();
+    loadItems();
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── DELETE ───────────────────────────────────────────────────────────────────
+function openDelete(id, name) {
+  deletingId = id;
+  document.getElementById('del-name').textContent = name;
+  document.getElementById('del-overlay').classList.add('open');
+}
+function closeDelete() { document.getElementById('del-overlay').classList.remove('open'); }
+async function confirmDelete() {
+  if (!deletingId) return;
+  try {
+    await apiFetch(`/items/${deletingId}`, { method: 'DELETE' });
+    toast('Item deleted', 'success');
+    closeDelete();
+    loadItems();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ── HEALTH ───────────────────────────────────────────────────────────────────
+async function loadHealth() {
+  const endpoints = [
+    { id: 'h-live',  path: '/health/live',  metaId: 'h-live-meta' },
+    { id: 'h-basic', path: '/health',        metaId: 'h-basic-meta' },
+    { id: 'h-ready', path: '/health/ready',  metaId: 'h-ready-meta' },
+  ];
+  const raw = {};
+  for (const ep of endpoints) {
+    const el = document.getElementById(ep.id);
+    el.className = 'health-status loading';
+    el.textContent = '— Checking...';
+    document.getElementById(ep.metaId).innerHTML = '';
+    try {
+      const data = await apiFetch(ep.path);
+      raw[ep.path] = data;
+      el.className = 'health-status ok';
+      el.innerHTML = '● Healthy';
+      const meta = Object.entries(data)
+        .filter(([k]) => k !== 'status')
+        .map(([k, v]) => `${k}: <span>${v}</span>`).join('<br>');
+      document.getElementById(ep.metaId).innerHTML = meta;
+    } catch (e) {
+      raw[ep.path] = { error: e.message };
+      el.className = 'health-status err';
+      el.innerHTML = '✕ Unreachable';
+      document.getElementById(ep.metaId).innerHTML = `<span style="color:var(--danger)">${e.message}</span>`;
+    }
+  }
+  document.getElementById('health-raw').textContent = JSON.stringify(raw, null, 2);
+}
+
+async function checkSidebarHealth() {
+  try {
+    await apiFetch('/health/live');
+    document.getElementById('sb-api').className = 'dot ok';
+  } catch {
+    document.getElementById('sb-api').className = 'dot err';
+  }
+  try {
+    const data = await apiFetch('/health/ready');
+    document.getElementById('sb-db').className = data.db === 'connected' ? 'dot ok' : 'dot err';
+  } catch {
+    document.getElementById('sb-db').className = 'dot err';
+  }
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  el.innerHTML = `<span>${icons[type]}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// close modals on overlay click
+document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+document.getElementById('del-overlay').addEventListener('click',   e => { if(e.target===e.currentTarget) closeDelete(); });
+
+// keyboard shortcut
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDelete(); } });
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+loadItems();
+checkSidebarHealth();
+setInterval(checkSidebarHealth, 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+version: "3.9"
+
+x-db-env: &db-env
+  DB_HOST:     db
+  DB_PORT:     "5432"
+  DB_NAME:     appdb
+  DB_USER:     postgres
+  DB_PASSWORD: postgres
+
+x-jwt-env: &jwt-env
+  JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production-min-32-chars}
+
+services:
+
+  # ── Items service — port 8000 ─────────────────────────────────────────────
+  items:
+    build:
+      context: ./microservice
+      dockerfile: Dockerfile
+    container_name: microsvc-items
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *db-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Auth service — port 8001 ──────────────────────────────────────────────
+  auth:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    container_name: microsvc-auth
+    ports:
+      - "8001:8001"
+    environment:
+      <<: [*db-env, *jwt-env]
+      SMTP_USER:     ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM:    ${EMAIL_FROM:-}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Orders service — port 8002 ────────────────────────────────────────────
+  orders:
+    build:
+      context: ./orders_service
+      dockerfile: Dockerfile
+    container_name: microsvc-orders
+    ports:
+      - "8002:8002"
+    environment:
+      <<: [*db-env, *jwt-env]
+      ITEMS_SERVICE_URL: http://items:8000
+      AUTH_SERVICE_URL:  http://auth:8001
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── PostgreSQL — shared instance ──────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: microsvc-db
+    environment:
+      POSTGRES_DB:       appdb
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deployment/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
