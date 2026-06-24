@@ -1,0 +1,31 @@
+name: SSM Demo
+
+on:
+workflow_dispatch:
+
+permissions:
+id-token: write
+contents: read
+
+jobs:
+create-directory:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Configure AWS Credentials
+    uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+      aws-region: ap-south-1
+
+  - name: Create Directory Through SSM
+    run: |
+      aws ssm send-command \
+        --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+        --document-name "AWS-RunShellScript" \
+        --parameters commands='[
+          "mkdir -p /home/ec2-user/github-CICD",
+          "echo Directory created successfully"
+        ]'
+```
