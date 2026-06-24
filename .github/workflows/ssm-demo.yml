@@ -25,4 +25,4 @@ jobs:
 
       - name: Create Directory Through SSM
         run: |
-          aws ssm send-command             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}"             --document-name "AWS-RunShellScript"             --parameters commands='["mkdir -p /tmp/github-CICD","echo Directory created successfully"]'
+          aws ssm send-command             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}"             --document-name "AWS-RunShellScript"             --parameters commands='["mkdir -p /home/ubuntu/github-CICD","echo Directory created successfully"]'
