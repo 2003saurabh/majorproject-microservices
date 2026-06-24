@@ -1,7 +1,9 @@
 name: SSM Demo
 
 on:
-workflow_dispatch:
+push:
+branches:
+- main
 
 permissions:
 id-token: write
@@ -26,6 +28,6 @@ steps:
         --document-name "AWS-RunShellScript" \
         --parameters commands='[
           "mkdir -p /home/ec2-user/github-CICD",
-          "echo Directory created successfully"
+          "echo GitHub Action executed successfully"
         ]'
 ```
