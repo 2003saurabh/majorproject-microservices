@@ -32,8 +32,8 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
               "rm -rf /home/ubuntu/app",
-              "git clone "${{env.REPO_URL}}" /home/ubuntu/app",
-              "cd /home/ubuntu/app/majorproject-microservices/project",
+              "git clone ${{env.REPO_URL}} /home/ubuntu/app",
+              "cd /home/ubuntu/app/project",
               "docker compose up -d --build"
             ]' \
             --query "Command.CommandId" \
