@@ -9,9 +9,6 @@ from app import models, schemas, crud
 from app.seed import seed_database
 from fastapi.middleware.cors import CORSMiddleware
 
-# Create tables on startup
-models.Base.metadata.create_all(bind=engine)
-
 app = FastAPI(
     title="Python Microservice",
     description="Production-ready microservice — ECS on EC2, RDS PostgreSQL, health checks",
@@ -33,7 +30,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
-    """Runs once when the app starts — seeds DB with 50 dummy items if empty."""
+    """Runs once when the app starts — creates tables and seeds DB with 50 dummy items if empty."""
+    models.Base.metadata.create_all(bind=engine)
     from app.database import SessionLocal
     db = SessionLocal()
     try:
