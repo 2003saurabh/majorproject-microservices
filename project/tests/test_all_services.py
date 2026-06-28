@@ -612,9 +612,9 @@ class TestUsersMe:
     def test_get_me_no_token_returns_403(self):
         assert auth_client.get("/users/me").status_code == 403
 
-    def test_get_me_bad_token_returns_403(self):
+    def test_get_me_bad_token_returns_401(self):
         r = auth_client.get("/users/me", headers={"Authorization": "Bearer badtoken"})
-        assert r.status_code == 403
+        assert r.status_code == 401
 
     def test_update_me_name(self):
         user  = _make_verified_user()

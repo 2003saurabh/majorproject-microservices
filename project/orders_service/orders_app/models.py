@@ -25,7 +25,7 @@ class Order(Base):
 
     items            = relationship("OrderItem",          back_populates="order", cascade="all, delete-orphan")
     status_history   = relationship("OrderStatusHistory", back_populates="order", cascade="all, delete-orphan",
-                                    order_by="OrderStatusHistory.changed_at")
+                                    order_by="OrderStatusHistory.id")
 
     def __repr__(self):
         return f"<Order id={self.id} user={self.user_id} status={self.status}>"
