@@ -152,4 +152,32 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  docker:
+    name: Docker Build & Push
+    needs: sonarqube
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ vars.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build & Push Items Service
+        run: |
+          docker build -t ${{ vars.DOCKERHUB_USERNAME }}/items:latest -t ${{ vars.DOCKERHUB_USERNAME }}/items:${{ github.sha }} ./project/microservice
+          docker push ${{ vars.DOCKERHUB_USERNAME }}/items --all-tags
+
+      - name: Build & Push Auth Service
+        run: |
+          docker build -t ${{ vars.DOCKERHUB_USERNAME }}/auth:latest -t ${{ vars.DOCKERHUB_USERNAME }}/auth:${{ github.sha }} ./project/auth_service
+          docker push ${{ vars.DOCKERHUB_USERNAME }}/auth --all-tags
+
+      - name: Build & Push Orders Service
+        run: |
+          docker build -t ${{ vars.DOCKERHUB_USERNAME }}/orders:latest -t ${{ vars.DOCKERHUB_USERNAME }}/orders:${{ github.sha }} ./project/orders_service
+          docker push ${{ vars.DOCKERHUB_USERNAME }}/orders --all-tags
   
