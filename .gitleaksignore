@@ -1,0 +1,7 @@
+02a4413aa96b26156ad39d81aad57f4544ade5c0:project/microservice/k8s/secret.yml:kubernetes-secret-yaml:2
+02a4413aa96b26156ad39d81aad57f4544ade5c0:project/k8s/auth/secret.yml:generic-api-key:9
+02a4413aa96b26156ad39d81aad57f4544ade5c0:project/k8s/orders/secret.yml:generic-api-key:9
+02a4413aa96b26156ad39d81aad57f4544ade5c0:project/k8s/secret.yml:kubernetes-secret-yaml:2
+02a4413aa96b26156ad39d81aad57f4544ade5c0:project/microservice/k8s/auth/secret.yml:generic-api-key:9
+02a4413aa96b26156ad39d81aad57f4544ade5c0:project/microservice/k8s/orders/secret.yml:generic-api-key:9
+02a4413aa96b26156ad39d81aad57f4544ade5c0:project/.env:generic-api-key:8
