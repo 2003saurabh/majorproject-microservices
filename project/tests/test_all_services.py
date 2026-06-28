@@ -70,6 +70,14 @@ def _items_db():
     finally: db.close()
 
 items_app.dependency_overrides[items_get_db] = _items_db
+items_app.root_path = ""
+
+# Patch engine and SessionLocal so on_startup/readiness use test DB
+import app.database as _items_db_mod
+_items_db_mod.engine = items_engine
+_items_db_mod.SessionLocal = ItemsSession
+import app.main as _items_main_mod
+_items_main_mod.engine = items_engine
 
 from fastapi.testclient import TestClient
 items_client = TestClient(items_app)
@@ -99,6 +107,16 @@ def _auth_db():
     finally: db.close()
 
 auth_app.dependency_overrides[auth_get_db] = _auth_db
+auth_app.root_path = ""
+
+# Patch SessionLocal and engine so startup/readiness use test DB
+import auth_app.database as _auth_db_mod
+_auth_db_mod.SessionLocal = AuthSession
+_auth_db_mod.engine = auth_engine
+_auth_db_mod.create_schema = lambda: None  # SQLite has no schemas
+import auth_app.main as _auth_main_mod
+_auth_main_mod.engine = auth_engine
+
 auth_client = TestClient(auth_app)
 
 
@@ -130,6 +148,17 @@ def _user_dep(user_id=1, is_superuser=False):
     return _dep
 
 orders_app.dependency_overrides[orders_get_current_user] = _user_dep()
+orders_app.root_path = ""
+
+# Patch SessionLocal and engine so startup/readiness use test DB
+import orders_app.database as _orders_db_mod
+_orders_db_mod.SessionLocal = OrdersSession
+_orders_db_mod.engine = orders_engine
+_orders_db_mod.create_schema = lambda: None  # SQLite has no schemas
+import orders_app.main as _orders_main_mod
+_orders_main_mod.create_schema = lambda: None
+_orders_main_mod.engine = orders_engine
+
 orders_client = TestClient(orders_app)
 
 
