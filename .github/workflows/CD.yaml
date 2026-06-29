@@ -1,12 +1,10 @@
 name: CD - Deploy to EC2 via SSM
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
+  workflow_dispatch:
+  push:
     branches:
-      - dev
+      - main
 
 permissions:
   id-token: write
@@ -20,14 +18,30 @@ jobs:
   deploy:
     name: Deploy via SSM
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Copy docker-compose to EC2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "mkdir -p /home/ubuntu/app/project"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
 
       - name: Deploy via SSM
         run: |
@@ -35,11 +49,14 @@ jobs:
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "cd /home/ubuntu/app/project || mkdir -p /home/ubuntu/app/project",
-              "docker login -u ${{ vars.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}",
+              "cd /home/ubuntu/app",
+              "rm -rf majorproject-microservices",
+              "git clone -b dev https://github.com/2003saurabh/majorproject-microservices.git",
+              "cd majorproject-microservices/project",
               "export DOCKERHUB_USERNAME=${{ vars.DOCKERHUB_USERNAME }}",
-              "docker compose -f /home/ubuntu/app/project/docker-compose.yml pull",
-              "docker compose -f /home/ubuntu/app/project/docker-compose.yml up -d --remove-orphans",
+              "docker login -u ${{ vars.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}",
+              "docker compose pull",
+              "docker compose up -d --remove-orphans",
               "docker image prune -f"
             ]' \
             --query "Command.CommandId" \
