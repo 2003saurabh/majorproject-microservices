@@ -1,9 +1,12 @@
-name: Deploy to EC2 via SSM
+name: CD - Deploy to EC2 via SSM
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
     branches:
-      - main
+      - dev
 
 permissions:
   id-token: write
@@ -11,12 +14,13 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
-  REPO_URL: https://github.com/2003saurabh/majorproject-microservices.git
   APP_DIR: /home/ubuntu/app
 
 jobs:
   deploy:
+    name: Deploy via SSM
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Configure AWS Credentials
@@ -31,13 +35,17 @@ jobs:
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "rm -rf /home/ubuntu/app",
-              "git clone ${{env.REPO_URL}} /home/ubuntu/app",
-              "cd /home/ubuntu/app/project",
-              "docker compose up -d --build"
+              "cd /home/ubuntu/app/project || mkdir -p /home/ubuntu/app/project",
+              "docker login -u ${{ vars.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}",
+              "export DOCKERHUB_USERNAME=${{ vars.DOCKERHUB_USERNAME }}",
+              "docker compose -f /home/ubuntu/app/project/docker-compose.yml pull",
+              "docker compose -f /home/ubuntu/app/project/docker-compose.yml up -d --remove-orphans",
+              "docker image prune -f"
             ]' \
             --query "Command.CommandId" \
             --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
 
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \

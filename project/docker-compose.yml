@@ -14,9 +14,7 @@ services:
 
   # ── Items service — port 8000 ─────────────────────────────────────────────
   items:
-    build:
-      context: ./microservice
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-2003saurabh}/items:latest
     container_name: microsvc-items
     ports:
       - "8000:8000"
@@ -29,9 +27,7 @@ services:
 
   # ── Auth service — port 8001 ──────────────────────────────────────────────
   auth:
-    build:
-      context: ./auth_service
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-2003saurabh}/auth:latest
     container_name: microsvc-auth
     ports:
       - "8001:8001"
@@ -48,9 +44,7 @@ services:
 
   # ── Orders service — port 8002 ────────────────────────────────────────────
   orders:
-    build:
-      context: ./orders_service
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-2003saurabh}/orders:latest
     container_name: microsvc-orders
     ports:
       - "8002:8002"
